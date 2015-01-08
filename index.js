@@ -7,9 +7,9 @@
 		sqlConnect(host, username, password, database, table, function(err, connection){
 
 			// Error occurred
-			connection.on('error', function(){
-				console.log("Error", arguments);
-			});
+			// connection.on('error', function(){
+			// 	console.log("Error", arguments);
+			// });
 
 			console.log("Ready to import");
 
