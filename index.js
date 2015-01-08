@@ -17,7 +17,7 @@
 
 			var importAlexa = require("./importDb");
 
-			var importNum = 1000;
+			var importNum = 100000;
 			importAlexa(connection, table, function(){
 				console.log("Successfully imported", importNum);
 
