@@ -6,6 +6,8 @@
 	function exec(host, username, password, database, table){
 		sqlConnect(host, username, password, database, table, function(err, connection){
 
+			if( err ){ throw err; }
+			if( !connection ){ throw new Error("Connection failed to establish"); }
 			// Error occurred
 			// connection.on('error', function(){
 			// 	console.log("Error", arguments);
