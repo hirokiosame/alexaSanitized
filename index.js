@@ -8,28 +8,33 @@
 
 			if( err ){ throw err; }
 			if( !connection ){ throw new Error("Connection failed to establish"); }
-			// Error occurred
-			// connection.on('error', function(){
-			// 	console.log("Error", arguments);
-			// });
 
 			console.log("Ready to import");
 
-			var importAlexa = require("./importDb");
 
-			var importNum = 100000;
-			importAlexa(connection, table, function(){
-				console.log("Successfully imported", importNum);
+			var importNum = 100;
 
-				var resolveUrls = require("./resolveUrls")(connection, table);
+			connection.query("SELECT COUNT(*) FROM `" + table + "`;", function(err, result){
+				if( err ){ throw err; }
 
-				resolveUrls(function(){
+				// Calculate how many more
+				importNum -= result[0]['COUNT(*)'];
 
-					console.log("Done");
-				});
+				// Proceed to import
+				var importAlexa = require("./importDb");
 
-				// process.exit();
-			}, importNum);
+				importAlexa(connection, table, function(){
+					console.log("Successfully imported... resolving urls", importNum);
+
+					var resolveUrls = require("./resolveUrls")(connection, table);
+
+					resolveUrls(function(){
+
+						console.log("Done resolving URLS. Exiting.");
+						process.exit();
+					});
+				}, importNum);
+			});
 		});
 	}
 
@@ -82,33 +87,4 @@
 		// dbCredentials.database = 'directedStudy';
 		module.exports = exec;
 	}
-
-// dbSetUp = require("./dbSetUp"),
-// importAlexa = require("./modules/importAlexa");
-
-/*	read({
-
-	})
-	read({ prompt: "Connecting to database:" + require("./dbCredentials").database + "\nContinue?" }, function(err, answer){
-		if( answer.toLowerCase() !== 'y' ){ return process.exit(); }
-
-		// Drop all tables
-		dbSetUp.dropTables(["inputs", "links", "resHeaders", "pages", "websites"], function(err, rows){
-
-			if( err ){
-				return console.log("Error dropping tables", err);
-			}
-
-			console.log("Tables dropped");
-
-			dbSetUp.createTables(["websites", "pages", "resHeaders", "links", "inputs"], function(){
-				console.log("Tables created");
-
-				console.log("Importing Alexa...");
-				importAlexa(function(){
-					process.exit();
-				});
-			});
-		});
-	});*/
 })();

@@ -153,6 +153,7 @@ module.exports = (function(){
 
 	return {
 		processRows: function(rows, callback){
+			console.log("Resolving...", rows.length);
 			var hosts = [];
 			async.eachLimit(
 				rows, 10,
@@ -160,26 +161,22 @@ module.exports = (function(){
 					detProtocol(row.host, function(err, res){
 
 						if( err ){
-							// console.log("Error", row);
-							if( errCodes.hasOwnProperty(err.message) ){
-
-								row.status = errCodes[err.message];	
-							}else{
-								console.log("Uncaught Error:", err.message, errCodes, row);
-							}
+							row.status = err.message;
 						}else{
 							["search", "query", "path", "pathname", "href"].forEach(function(p){
 								delete res.uri[p];
 							});
 							row.resolvedTo = url.format(res.uri);
-							row.status = 1;
+							row.status = "Success";
 						}
+
 						hosts.push(row);
 						
 						nextRow();
 					});
 				},
 				function(){
+					console.log("Done resolving", rows.length);
 					callback(hosts);
 				}
 			);

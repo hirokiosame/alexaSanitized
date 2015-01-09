@@ -6,7 +6,8 @@ module.exports = function(host, user, password, database, table, callback){
 		host: host,
 		user: user,
 		password: password,
-		database: database
+		database: database,
+		multipleStatements: true
 	});
 
 
@@ -20,7 +21,8 @@ module.exports = function(host, user, password, database, table, callback){
 			'UNIQUE (`host`),' +
 			'resolvedTo VARCHAR(100) DEFAULT NULL,' +
 			'UNIQUE (`resolvedTo`),' +
-			'status INT DEFAULT 0' +
+			'status INT DEFAULT NULL,' +
+			'FOREIGN KEY(status) REFERENCES ' + table + '_statuses(statusId)' +
 		');', function(err, rows){
 			if( err ){
 				console.log(err, this.sql);
@@ -28,6 +30,26 @@ module.exports = function(host, user, password, database, table, callback){
 			}
 
 			console.log("Successfully created table.");
+			callback(null, rows);
+		});	
+	}
+
+
+	// Create table
+	function createStatusTable(table, callback){
+		console.log("Creating error table");
+		connection.query('CREATE TABLE IF NOT EXISTS `' + table + '_statuses`(' +
+			'statusId INT NOT NULL AUTO_INCREMENT,' +
+			'PRIMARY KEY (statusId),' +
+			'statusMessage VARCHAR(100) NOT NULL,' +
+			'UNIQUE (`statusMessage`)' +
+		');', function(err, rows){
+			if( err ){
+				console.log(err, this.sql);
+				return callback(err);
+			}
+
+			console.log("Successfully error table.");
 			callback(null, rows);
 		});	
 	}
@@ -48,17 +70,18 @@ module.exports = function(host, user, password, database, table, callback){
 			function(err, rows){
 				if( err ){ throw err; }
 
-
 				// Create
 				if( rows.length === 0 ){
 					console.log("Table doesn't exist...");
 
-					createTable(table, function(err, fields){
-						if(err){ return console.log(err); }
+					createStatusTable(table, function(err, fields){
+						if(err){ throw err; }
 
-						console.log( fields );
+						createTable(table, function(err, fields){
+							if(err){ throw err; }
 
-						callback(null, connection);
+							callback(null, connection);
+						});
 					});
 				}
 

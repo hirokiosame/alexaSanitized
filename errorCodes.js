@@ -7,6 +7,7 @@ module.exports = {
 	"ECONNREFUSED": -6,
 	"read ECONNRESET": -7,
 	"connect ECONNREFUSED": -8,
+	"getaddrinfo ENOTFOUND": -9, // dghsmz.com
 	"Cannot resolve host": -9,
 	"Invalid protocol": -10,
 	"Invalid uri": -11,

@@ -1,9 +1,9 @@
 module.exports = function(connection, tableName, doneImporting, max){
 	
+	if( max <= 0 ){ return doneImporting(); }
 
 	var readLine = require("./readLine"),
 		async = require("async");
-
 
 
 	var imported = 0;
@@ -33,12 +33,13 @@ module.exports = function(connection, tableName, doneImporting, max){
 					if( diff > 0 ){ impHosts = hosts.splice(0, hosts.length-diff); }
 					else{ impHosts = hosts.splice(0); }
 
+
 					// Insert
 					// console.log("Importing", impHosts, impHosts.length);
 					connection.query(
 						"INSERT IGNORE INTO `" + tableName + "` (host) VALUES (" + impHosts.join("),(") + ");",
 						function(err, row, status){
-							if( err ){ return console.log( "MariaDB Error", err ); }
+							if( err ){ return console.log("MariaDB Error", err, this.sql); }
 
 							// Keep track
 							imported += row.affectedRows;
@@ -55,7 +56,7 @@ module.exports = function(connection, tableName, doneImporting, max){
 				},
 				function (err) {
 
-					console.log("Done!");
+					console.log("Done Importing!");
 					// Determine whether to continue
 					// More to import
 					if( imported < max ){ console.log(max-imported, "Left"); nextChunk(); }
