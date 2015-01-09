@@ -12,7 +12,7 @@
 			console.log("Ready to import");
 
 
-			var importNum = 100;
+			var importNum = 100000;
 
 			connection.query("SELECT COUNT(*) FROM `" + table + "`;", function(err, result){
 				if( err ){ throw err; }
