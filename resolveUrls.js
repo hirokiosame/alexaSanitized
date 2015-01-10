@@ -91,7 +91,7 @@ module.exports = function(connection, table){
 						}
 
 						// To avoid recursion...
-						setImmediate(function(){
+						process.nextTick(function(){
 							stream(callback);	
 						});
 					}
