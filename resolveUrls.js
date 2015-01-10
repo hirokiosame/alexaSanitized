@@ -34,11 +34,13 @@ module.exports = function(connection, table){
 					callback(err);
 					return;
 				}
-				
+
+
+				console.log(result);
 				if( result[1] && result[1][0] && result[1][0]['statusId'] ){
 					callback(null, (statuses[status] = result[1][0]['statusId']));	
 				}else{
-					console.log("ERROR! can't find statusId", JSON.stringify(result, 0, 3));
+					console.log("ERROR! can't find statusId", JSON.stringify(result, 0, 3), status, this.sql);
 				}
 			}
 		);
