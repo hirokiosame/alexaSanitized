@@ -5,7 +5,11 @@ module.exports = function(connection, table){
 
 	function markDuplicate(id, callback){
 		addStatus("Duplicate", function(err, statusCode){
-			if( err ){ return console.log("Error fetching status code", err); }
+			if( err ){
+				console.log("Error fetching status code", err);
+				callback(err);
+				return;
+			}
 
 			connection.query("UPDATE " + table + " SET `status` = ? WHERE `id` = " + id + ";", [statusCode], function(err, rows){
 				if( err || rows.affectedRows === 0 ){ console.log("Error saving duplicate", this.sql); }
@@ -26,7 +30,9 @@ module.exports = function(connection, table){
 			[status, status],
 			function(err, result){
 				if( err ){
-					return console.log("Error inserting status", err, this.sql);
+					console.log("Error inserting status", err, this.sql);
+					callback(err);
+					return;
 				}
 				callback(null, (statuses[status] = result[1][0]['statusId']));
 			}
@@ -41,7 +47,11 @@ module.exports = function(connection, table){
 
 
 		addStatus(row.status, function(err, statusCode){
-			if( err ){ return console.log("Error fetching status code", err); }
+			if( err ){
+				console.log("Error fetching status code", err);
+				callback(err);
+				return;
+			}
 
 			row.status = statusCode;
 
@@ -72,13 +82,18 @@ module.exports = function(connection, table){
 			}
 
 			netUtils.processRows(rows, function(hosts){
-				// console.log( hosts );
-
 				async.each(
 					hosts,
 					updateRow,
-					function(){
-						stream(callback);
+					function(err){
+						if( err ){
+							console.log("Error occurred", err);
+						}
+
+						// To avoid recursion...
+						setImmediate(function(){
+							stream(callback);	
+						});
 					}
 				);
 			});
