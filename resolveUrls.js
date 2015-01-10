@@ -20,30 +20,83 @@ module.exports = function(connection, table){
 
 	var statuses = {};
 
-	function addStatus(status, callback){
-		if( statuses[status] ){
-			return callback(null, statuses[status]);
-		}
+	function getStatusId(status, callback){
+
+		// Check Cache
+		if( statuses[status] ){ callback(null, statuses[status]); return; }
+
+		// Check MySQL
 		connection.query(
-			"INSERT IGNORE INTO " + table + "_statuses (statusMessage) VALUES (?);" +
 			"SELECT statusId FROM " + table + "_statuses WHERE statusMessage = ?;",
-			[status, status],
+			[status],
 			function(err, result){
 				if( err ){
-					console.log("Error inserting status", err, this.sql);
+					console.log("Error selecting statusId from table", err, this.sql);
 					callback(err);
 					return;
 				}
 
+				// Selected
+				if( result.length === 0 ){ return callback(null, null); }
 
-				console.log(result);
-				if( result[1] && result[1][0] && result[1][0]['statusId'] ){
-					callback(null, (statuses[status] = result[1][0]['statusId']));	
+				// Validate result
+				if( typeof result[0] !== "object" || !result[0].hasOwnProperty("statusId") || typeof result[0]['statusId'] !== "number" ){
+					console.log("Error selecting statusId: invalid result format", result, this.sql);
+					getStatusId(status, callback);
+					return;
 				}else{
-					console.log("ERROR! can't find statusId", JSON.stringify(result, 0, 3), status, this.sql);
+					callback(null, (statuses[status] = result[0]['statusId']));
 				}
 			}
 		);
+	}
+
+	function addStatus(status, callback){
+
+		getStatusId(status, function(err, statusId){
+			if( err ){
+				callback(err);
+				return;
+			}
+
+			if( typeof statusId === "number" ){
+				callback(null, statusId);
+				return;
+			}
+
+			connection.query(
+				"INSERT IGNORE INTO " + table + "_statuses (statusMessage) VALUES (?);",
+				[status],
+				function(err, result){
+					if( err ){
+						console.log("Error inserting status", err, this.sql);
+						callback(err);
+						return;
+					}
+
+					if( typeof result !== "object" || !result.hasOwnProperty("affectedRows") || typeof result.affectedRows !== "number" ){
+						console.log("Error inserting status, invalid result format", result, this.sql);
+						return addStatus(status, callback);
+					}
+
+					// Inserted
+					if( result.affectedRows === 1 ){
+						callback(null, (statuses[status] = result.insertId)); return;
+					}
+
+					// Simultaneously added?
+					else if( statuses[status] ){
+						callback(null, statuses[status]); return;
+					}
+
+					else{
+						console.log("Error inserting status", arguments, this.sql, statuses, statusId);
+						addStatus(status, callback);
+						return;
+					}
+				}
+			);
+		});
 	}
 
 	function updateRow(row, callback){
