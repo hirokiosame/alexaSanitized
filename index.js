@@ -3,39 +3,55 @@
 
 	var sqlConnect = require("./sqlConnect");
 
-	function exec(host, username, password, database, table){
-		sqlConnect(host, username, password, database, table, function(err, connection){
+	function main(credentials, importCount, doneCallback){
 
-			if( err ){ throw err; }
-			if( !connection ){ throw new Error("Connection failed to establish"); }
+		// Input Validation
+		if( typeof doneCallback !== "function" ){
+			throw new Error("Callback is not function");
+		}
 
-			console.log("Ready to import");
-
-
-			var importNum = 100000;
-
+		// Fetch rows to check how many have already been imported
+		function checkAlreadyImported(connection, table, cb){
 			connection.query("SELECT COUNT(*) FROM `" + table + "`;", function(err, result){
-				if( err ){ throw err; }
 
-				// Calculate how many more
-				importNum -= result[0]['COUNT(*)'];
+				if( err ){ cb(err); return; }
 
-				// Proceed to import
-				var importAlexa = require("./importDb");
-
-				importAlexa(connection, table, function(){
-					console.log("Successfully imported... resolving urls", importNum);
-
-					var resolveUrls = require("./resolveUrls")(connection, table);
-
-					resolveUrls(function(){
-
-						console.log("Done resolving URLS. Exiting.");
-						process.exit();
-					});
-				}, importNum);
+				cb(null, result[0]['COUNT(*)']);
 			});
-		});
+		}
+
+		// Make SQL connection and establish tables
+		sqlConnect(
+			credentials,
+			function(err, connection){
+
+				// On error
+				if( err ){ doneCallback(err); return; }
+
+				// Failed connection
+				if( !connection ){ doneCallback(new Error("Connection failed to establish")); return; }
+
+				checkAlreadyImported(connection, credentials.table, function(err, count){
+
+					if( err ){ doneCallback(err); return; }
+
+					// Calculate how many more
+					importCount -= count;
+
+					// Proceed to import
+					var importAlexa = require("./importAlexa");
+
+					importAlexa(connection, credentials.table, importCount, function(){
+
+						var resolveUrls = require("./resolveUrls")(connection, credentials.table);
+
+						// Start resolving URLs
+						resolveUrls(doneCallback);
+
+					});
+				});
+			}
+		);
 	}
 
 	// Direct
@@ -75,16 +91,27 @@
 		check("Table", args[4], function(err, table){
 
 		if( err ){ throw err; }
+		check("Number of hosts to import", args[5], function(err, importCount){
 
-			exec(host, username, password, database, table);
+		if( err ){ throw err; }
 
-		}); }); }); }); });
+			main({
+				host: host,
+				user: username,
+				password: password,
+				database: database,
+				table: table
+			}, importCount, function(err){
+				if( err ){ throw err; }
+				else{
+					console.log("Done importing and resolving URLs!");
+				}
+
+				process.exit();
+			});
+
+		}); }); }); }); }); });
 	}else{
-
-		// dbCredentials.host = '127.0.0.1';
-		// dbCredentials.user = 'crawler';
-		// dbCredentials.password = 'crawling0for0directed0study';
-		// dbCredentials.database = 'directedStudy';
-		module.exports = exec;
+		module.exports = main;
 	}
 })();

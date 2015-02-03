@@ -1,95 +1,104 @@
-module.exports = function(host, user, password, database, table, callback){
+
+// Create table
+function createStatusTable(connection, table, callback){
+	connection.query('CREATE TABLE IF NOT EXISTS `' + table + '_statuses`(' +
+		'statusId INT NOT NULL AUTO_INCREMENT,' +
+		'PRIMARY KEY (statusId),' +
+		'statusMessage VARCHAR(100) NOT NULL,' +
+		'UNIQUE (`statusMessage`)' +
+	');', function(err, rows){
+		if( err ){
+			console.log(err, this.sql);
+			return callback(err);
+		}
+
+		console.log("Successfully error table.");
+		callback(null, rows);
+	});	
+}
+
+// Create table
+function createTable(connection, table, callback){
+	connection.query('CREATE TABLE IF NOT EXISTS `' + table + '`(' +
+		'id INT NOT NULL AUTO_INCREMENT,' +
+		'PRIMARY KEY (id),' +
+		'host VARCHAR(100) NOT NULL,' +
+		'UNIQUE (`host`),' +
+		'resolvedTo VARCHAR(100) DEFAULT NULL,' +
+		'UNIQUE (`resolvedTo`),' +
+		'status INT DEFAULT NULL,' +
+		'FOREIGN KEY(status) REFERENCES ' + table + '_statuses(statusId)' +
+	');', function(err, rows){
+		if( err ){
+			console.log(err, this.sql);
+			return callback(err);
+		}
+
+		console.log("Successfully created table.");
+		callback(null, rows);
+	});	
+}
+
+module.exports = function(credentials, callback){
 
 	var mysql = require("mysql");
 
-	var connection = mysql.createConnection({
-		host: host,
-		user: user,
-		password: password,
-		database: database,
-		multipleStatements: true
-	});
-
-
-	// Create table
-	function createTable(table, callback){
-		console.log("Creating table");
-		connection.query('CREATE TABLE IF NOT EXISTS `' + table + '`(' +
-			'id INT NOT NULL AUTO_INCREMENT,' +
-			'PRIMARY KEY (id),' +
-			'host VARCHAR(100) NOT NULL,' +
-			'UNIQUE (`host`),' +
-			'resolvedTo VARCHAR(100) DEFAULT NULL,' +
-			'UNIQUE (`resolvedTo`),' +
-			'status INT DEFAULT NULL,' +
-			'FOREIGN KEY(status) REFERENCES ' + table + '_statuses(statusId)' +
-		');', function(err, rows){
-			if( err ){
-				console.log(err, this.sql);
-				return callback(err);
-			}
-
-			console.log("Successfully created table.");
-			callback(null, rows);
-		});	
+	// Validate credentials
+	if( typeof credentials !== "object" || !(credentials instanceof Object) ){
+		callback(new Error("Credentials is not a valid object")); return;
 	}
 
-
-	// Create table
-	function createStatusTable(table, callback){
-		console.log("Creating error table");
-		connection.query('CREATE TABLE IF NOT EXISTS `' + table + '_statuses`(' +
-			'statusId INT NOT NULL AUTO_INCREMENT,' +
-			'PRIMARY KEY (statusId),' +
-			'statusMessage VARCHAR(100) NOT NULL,' +
-			'UNIQUE (`statusMessage`)' +
-		');', function(err, rows){
-			if( err ){
-				console.log(err, this.sql);
-				return callback(err);
-			}
-
-			console.log("Successfully error table.");
-			callback(null, rows);
-		});	
+	if( !["host", "user", "password", "database", "table"].every(function(property){
+		return credentials.hasOwnProperty(property) && (typeof credentials[property] === "string") && credentials[property].length > 0;
+	}) ){
+		callback(new Error("Invalid credential properties"));
+		return;
 	}
 
+	credentials.multipleStatements = true;
+
+
+	var connection = mysql.createConnection(credentials);
 
 	// Connect
 	connection.connect(function(err){
 
 		if( err ){ return callback(err); }
 
-		console.log("Successfully connected to MySQL.");
+		// Catches ctrl+c event to exit properly
+		process
+		.on('SIGINT', process.exit)
+
+		// Cleanup before exit
+		.on('exit', function(){
+
+			// Kill MySql connection
+			connection.end();
+		});
 
 
 		// Check if table exists and get stats if does
 		connection.query(
-			"SELECT * FROM information_schema.tables WHERE table_schema = '" + database + "' AND table_name = '" + table + "' LIMIT 1;",
-			// "DROP TABLE IF EXISTS `" + table + "`;",
+			"SELECT * FROM information_schema.tables WHERE table_schema = '" + credentials.database + "' AND table_name = '" + credentials.table + "' LIMIT 1;",
 			function(err, rows){
-				if( err ){ throw err; }
+				if( err ){ return callback(err); }
 
-				// Create
+				// If tables don't exist, Create
 				if( rows.length === 0 ){
-					console.log("Table doesn't exist...");
+					createStatusTable(connection, credentials.table, function(err, fields){
+						if( err ){ return callback(err); }
 
-					createStatusTable(table, function(err, fields){
-						if(err){ throw err; }
+						createTable(connection, credentials.table, function(err, fields){
+							if( err ){ return callback(err); }
 
-						createTable(table, function(err, fields){
-							if(err){ throw err; }
-
+							// Success
 							callback(null, connection);
 						});
 					});
 				}
 
-				// Already Exists
-				else{
-					console.log("Table exists");
-					callback(null, connection);
-				}
+				// Already Exists - Success
+				else{ callback(null, connection); }
 
 				/*
 				// Delete
@@ -108,19 +117,5 @@ module.exports = function(host, user, password, database, table, callback){
 				}*/
 			}
 		);
-	});
-
-
-	// Catches ctrl+c event to exit properly
-	process
-	.on('SIGINT', process.exit)
-
-	// Cleanup before exit
-	.on('exit', function(){
-
-		console.log("Exit");
-
-		// Kill MySql connection
-		connection.end();
 	});
 };
