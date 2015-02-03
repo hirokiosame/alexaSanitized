@@ -149,11 +149,9 @@ module.exports = (function(){
 		pingHttps(host, callback);
 	}
 
-	var errCodes = require("./errorCodes");
-
 	return {
 		processRows: function(rows, callback){
-			console.log("Resolving...", rows.length);
+			// console.log("Resolving...", rows.length);
 			var hosts = [];
 			async.eachLimit(
 				rows, 10,
@@ -176,7 +174,7 @@ module.exports = (function(){
 					});
 				},
 				function(){
-					console.log("Done resolving", rows.length);
+					// console.log("Done resolving", rows.length);
 					callback(hosts);
 				}
 			);

@@ -47,7 +47,6 @@
 
 						// Start resolving URLs
 						resolveUrls(doneCallback);
-
 					});
 				});
 			}

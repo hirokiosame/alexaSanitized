@@ -21,6 +21,7 @@ module.exports = function(connection, tableName, importCount, doneImporting){
 
 	var cbTriggered = false,
 		imported = 0;
+		
 	readLine(
 		"./top-1m.csv",
 		function(progress, rows, nextChunk){
