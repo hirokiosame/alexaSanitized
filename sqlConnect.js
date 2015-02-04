@@ -49,7 +49,7 @@ module.exports = function(credentials, callback){
 	}
 
 	if( !["host", "user", "password", "database", "table"].every(function(property){
-		return credentials.hasOwnProperty(property) && (typeof credentials[property] === "string") && credentials[property].length > 0;
+		return typeof credentials[property] === "string" && credentials[property].length > 0;
 	}) ){
 		callback(new Error("Invalid credential properties"));
 		return;
