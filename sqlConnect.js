@@ -12,7 +12,6 @@ function createStatusTable(connection, table, callback){
 			return callback(err);
 		}
 
-		console.log("Successfully error table.");
 		callback(null, rows);
 	});	
 }
@@ -34,7 +33,6 @@ function createTable(connection, table, callback){
 			return callback(err);
 		}
 
-		console.log("Successfully created table.");
 		callback(null, rows);
 	});	
 }
